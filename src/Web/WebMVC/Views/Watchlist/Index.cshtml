@@ -1,0 +1,197 @@
+﻿@model List<RTCodingExercise.Microservices.Models.WatchlistItem>
+
+@{
+    ViewData["Title"] = "Regtransfers Watchlist";
+    var stats = ViewBag.Statistics as RTCodingExercise.Microservices.Models.RevenueStatistics;
+
+}
+
+<style>
+    @@font-face {
+        font-family: 'UKNumberPlate';
+        src: url('https://cdn.jsdelivr.net/gh/petemill/uk-number-plate-font@master/UKNumberPlate.woff2') format('woff2'),
+            url('https://cdn.jsdelivr.net/gh/petemill/uk-number-plate-font@master/UKNumberPlate.woff') format('woff');
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+    }
+</style>
+
+<h1 class="mb-4">Your Watchlist</h1>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (Model.Count == 0)
+{
+    <div class="alert alert-info" role="alert">
+        Your watchlist is empty. Browse the <a asp-area="" asp-controller="Home" asp-action="Index">catalog</a> to add
+        plates to your watchlist.
+    </div>
+}
+else
+{
+    <div class="table-responsive mb-4">
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Registration</th>
+                    <th>Current Price</th>
+                    <th>Watch Price</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (WatchlistItem item in Model)
+                {
+                    <tr>
+                        <td class="align-middle">
+                            <div
+                                style="background-color: #ffd900; border: 4px solid #000; border-radius: 4px; padding: 15px 10px; display: inline-block;">
+                                <div
+                                    style="font-family: 'UKNumberPlate', 'Charles Wright', Arial, sans-serif; font-size: 1.5rem; font-weight: bold; letter-spacing: 8px; color: #000; text-shadow: 1px 1px 0px rgba(0,0,0,0.1);">
+                                    @item.WatchedPlate.Registration
+                                </div>
+                            </div>
+                        </td>
+                        <td class="align-middle">£@item.WatchedPlate.SalePrice</td>
+                        <td class="align-middle">
+                            <div class="price-container" data-item-id="@item.Id">
+                                <span class="price-display">£@item.WatchPrice</span>
+                                <div class="price-edit" style="display: none;">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text">£</span>
+                                        <input type="number" class="form-control price-input" value="@item.WatchPrice" min="0"
+                                            style="max-width: 100px;">
+                                        <button type="button" class="btn btn-success update-price-btn">Update</button>
+                                        <button type="button" class="btn btn-secondary cancel-price-btn">Cancel</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="align-middle">
+                            @* <form method=POST asp-controller="Watchlist" asp-action="Remove" asp-route-id="@item.Id"> *@
+                            <button data-item-id="@item.Id" class="btn btn-danger btn-sm remove-btn">Remove</button>
+
+                            <button type="button" class="btn btn-sm btn-primary edit-price-btn" title="Edit price">Edit Watch
+                                Price</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const removeBtns = document.querySelectorAll('.remove-btn');
+
+            removeBtns.forEach(btn => {
+                btn.addEventListener('click', function () {
+                    let rowId = btn.dataset.itemId;
+                    if (confirm('Are you sure you want to remove this item from your watchlist?')) {
+                        fetch(`/Watchlist/Remove?id=${rowId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        })
+                            .then(response => {
+                                if (response.ok) {
+                                    location.reload();
+                                } else {
+                                    alert('Failed to remove item from watchlist');
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                alert('Error removing item from watchlist');
+                            });
+                    }
+                });
+            });
+        });
+
+        //Edit Price Functionality
+        //Edit Button
+        const editPriceBtns = document.querySelectorAll('.edit-price-btn');
+
+        editPriceBtns.forEach(btn => {
+            btn.addEventListener('click', function () {
+                const priceContainer = this.closest('tr').querySelector('.price-container');
+                const priceDisplay = priceContainer.querySelector('.price-display');
+                const priceEdit = priceContainer.querySelector('.price-edit');
+
+                priceDisplay.style.display = 'none';
+                this.style.display = 'none';
+                priceEdit.style.display = 'block';
+                priceEdit.querySelector('.price-input').focus();
+            });
+        });
+
+        //Update Button
+        const updateBtns = document.querySelectorAll('.update-price-btn');
+        updateBtns.forEach(btn => {
+            btn.addEventListener('click', function () {
+                const priceContainer = this.closest('tr').querySelector('.price-container');
+                const priceDisplay = priceContainer.querySelector('.price-display');
+                const priceEdit = priceContainer.querySelector('.price-edit');
+                const editBtn = this.closest('tr').querySelector('.edit-price-btn');
+                const itemId = priceContainer.dataset.itemId;
+                const newPrice = priceContainer.querySelector('.price-input').value;
+
+                fetch(`/Watchlist/UpdateWatchPrice?id=${itemId}&price=${newPrice}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            priceDisplay.textContent = '£' + parseFloat(newPrice).toFixed(2);
+                            priceDisplay.style.display = 'inline';
+                            editBtn.style.display = 'inline-block';
+                            priceEdit.style.display = 'none';
+                        } else {
+                            alert('Failed to update item watch price');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error updating watch price');
+                    });
+            });
+        });
+
+
+        //cAncel Button
+        const cancelBtns = document.querySelectorAll('.cancel-price-btn');
+        cancelBtns.forEach(btn => {
+            btn.addEventListener('click', function () {
+                const priceContainer = this.closest('tr').querySelector('.price-container');
+                const priceDisplay = priceContainer.querySelector('.price-display');
+                const priceEdit = priceContainer.querySelector('.price-edit');
+                const editBtn = this.closest('tr').querySelector('.edit-price-btn');
+
+                priceDisplay.style.display = 'inline';
+                editBtn.style.display = 'inline-block';
+                priceEdit.style.display = 'none';
+            });
+        });
+
+    </script>
+}

@@ -1,4 +1,5 @@
-﻿using RTCodingExercise.Microservices.Models;
+﻿using Microsoft.AspNetCore.Mvc.Formatters;
+using RTCodingExercise.Microservices.Models;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
@@ -152,6 +153,35 @@ namespace RTCodingExercise.Microservices.Controllers
                 return Json(new { success = false, error });
             }
         }
+
+        [HttpPost]
+        public async Task<IActionResult> AddToWatchList(Guid plateId, Guid? customerId)
+        {
+            var client = _httpClientFactory.CreateClient("CatalogApi");
+            var url = $"/api/Watchlist";
+
+            var obj = new
+            {
+                plateId = plateId,
+                customerId = customerId,
+            };
+
+            var content = new StringContent(JsonSerializer.Serialize(obj), Encoding.UTF8, "application/json");
+            var response = await client.PostAsync(url, content);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                TempData["Error"] = $"Failed to add plate to watchlist: {error}";
+            }
+            else
+            {
+                TempData["Success"] = "Plate added to watchlist successfully!";
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
 
         public IActionResult Privacy()
         {

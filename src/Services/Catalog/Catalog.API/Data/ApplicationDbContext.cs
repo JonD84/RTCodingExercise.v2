@@ -6,8 +6,8 @@
         {
 
         }
-
         public DbSet<Plate> Plates { get; set; }
+        public DbSet<WatchlistItem> WatchListItems { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -48,10 +48,38 @@
                 entity.HasIndex(e => e.Numbers);
                 entity.HasIndex(e => e.Registration);
                 entity.HasIndex(e => e.SalePrice);
-                
+
                 // Composite index for common filter combinations
                 entity.HasIndex(e => new { e.Status, e.SalePrice });
             });
+
+            modelBuilder.Entity<WatchlistItem>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.PlateId)
+                    .IsRequired(true);
+
+                entity.Property(e => e.WatchPrice)
+                     .HasPrecision(18, 2);
+
+                entity.Property(e => e.LastKnownPrice)
+                     .HasPrecision(18, 2);
+
+                entity.Property(e => e.LastNotifiedPrice)
+                     .HasPrecision(18, 2);
+
+                entity.Property(e => e.UserId)
+                    .IsRequired(true);
+
+                entity.Property(e => e.DateCreated)
+                     .IsRequired(true);
+
+                entity.Property(e => e.NotificaionSent)
+                    .HasDefaultValue(false);
+
+            });
+
         }
     }
 }
